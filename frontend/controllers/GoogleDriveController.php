@@ -32,10 +32,20 @@ class GoogleDriveController extends Controller{
 
         $access_token = Yii::$app->session->get('access_token');
         $client->setAccessToken($access_token);
+        if ($client->isAccessTokenExpired() === true) {
+            $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+            $access_token = $client->getAccessToken();
+            Yii::$app->session->set('access_token' , $access_token);
+        }
         $drive_api_url = "https://www.googleapis.com/drive/v2/files";
         $httpClient = $client->authorize();
-        $response = $httpClient->request('get' , $drive_api_url);
-        $data = json_decode($response->getBody(), true);
+        $data = [];
+        try{
+            $response = $httpClient->request('get' , $drive_api_url);
+            $data = json_decode($response->getBody(), true);
+        } catch (Exception $e){
+            Yii::$app->session->setFlash("An error occurred while fetching data: " . $e->getMessage());
+        }
         return $this->render('index', [
             'data' => $data,
         ]);
@@ -45,7 +55,7 @@ class GoogleDriveController extends Controller{
         if(Yii::$app->user->isGuest || Yii::$app->session->get('access_token')) {
             return $this->goHome();
         }
-        $client = Yii::$app->get('GoogleApi')->getClient();;
+        $client = Yii::$app->get('GoogleApi')->getClient();
         if (!Yii::$app->request->get('code')){
             $auth_url = $client->createAuthUrl();
             return $this->redirect($auth_url);
