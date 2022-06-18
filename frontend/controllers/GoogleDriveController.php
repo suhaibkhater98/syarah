@@ -37,17 +37,21 @@ class GoogleDriveController extends Controller{
             $access_token = $client->getAccessToken();
             Yii::$app->session->set('access_token' , $access_token);
         }
-        $drive_api_url = "https://www.googleapis.com/drive/v2/files";
+        $fields = 'nextLink,selfLink,items(id,title,thumbnailLink,embedLink,modifiedDate,fileSize,ownerNames)';
+        $driveApiUrl = "https://www.googleapis.com/drive/v2/files?maxResults=5&".$fields;
+        if(Yii::$app->request->get('nextLink')){
+            $driveApiUrl = Yii::$app->request->get('nextLink');
+        }
         $httpClient = $client->authorize();
         $data = [];
         try{
-            $response = $httpClient->request('get' , $drive_api_url);
+            $response = $httpClient->request('get' , $driveApiUrl);
             $data = json_decode($response->getBody(), true);
         } catch (Exception $e){
             Yii::$app->session->setFlash("An error occurred while fetching data: " . $e->getMessage());
         }
         return $this->render('index', [
-            'data' => $data,
+            'data' => $data
         ]);
     }
 
